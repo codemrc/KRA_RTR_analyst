@@ -303,6 +303,8 @@
     <div id="viewDiv" style="width: 100%; height: 100vh;"></div>
     <div id="koordinat-display">Koordinat:</div>
     <div id="tm3-display">TM3:</div>
+    <!-- Tombol untuk kembali ke halaman sebelumnya -->
+    <div class="toggle-btn" id="toggleBackBtn" style="top: 572px;"><< Back</div>
 
     <script>
         require([
@@ -318,7 +320,10 @@
             "esri/geometry/geometryEngine",
            "esri/widgets/Popup"
         ], (Map, MapView, GeoJSONLayer, GroupLayer, BasemapToggle,Expand,LayerList, Locate, Graphic,geometryEngine,Popup) => {
-
+            // Event listener untuk tombol "<< Back"
+            document.getElementById("toggleBackBtn").addEventListener("click", function() {
+                window.location.href = "https://codemrc.github.io/KRA_RTR/";
+            });
             // Warna untuk setiap kategori NAMOBJ
             const renderer_RTRW = {
                 type: "unique-value",
