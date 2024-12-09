@@ -23,7 +23,8 @@
             z-index: 150;
             background-color: rgba(48, 48, 48, 0.834);
             padding: 5px;
-            border-radius: 1px;
+            border-radius: 8px;
+            border: 1px solid #dfe0e0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             width: 13% ;
             display: none; /* Disembunyikan secara default */
@@ -75,8 +76,9 @@
             z-index: 100;
             background-color: rgba(37, 37, 37, 0.962);
             padding: 8px;
-            border-radius: 1px;
+            border-radius: 5px;
             cursor: pointer;
+            border: 1px solid #a3a3a3;
             color: hsl(0, 0%, 100%);
         }
 
@@ -123,7 +125,7 @@
         padding: 5px;
         margin: 5px 0;
         border: 1px solid #dfe0e0;
-        border-radius: 1px;
+        border-radius: 5px;
         background-color: #3d3d3d; /* Warna latar belakang input */
         color: white; /* Warna teks */
         }
@@ -135,10 +137,10 @@
             left: 10px;
             z-index: 100;
             background-color: rgba(37, 37, 37, 0.962);
-            padding: 5.5px;
-            border-radius: 1px;
+            padding: 10px;
+            border-radius: 5px;
             cursor: pointer;
-       
+            border: 1px solid #a3a3a3;
             color: hsl(0, 0%, 100%);
         }
 
@@ -149,7 +151,8 @@
             z-index: 99;
             background-color: #0c0c0c9b;
             padding: 10px;
-            border-radius: 1px;
+            border-radius: 5px;
+            border: 1px solid #a3a3a3;
             display: none;
             color: hsl(0, 0%, 100%);
             width: 6%;
@@ -157,7 +160,7 @@
         
         .tm3-input input, .tm3-input select, .tm3-input button {
             margin: 4px 0;
-            padding: 1px;
+            padding: 4px;
             width: 90%;
             background-color: #0c0c0c9b;
             color: hsl(0, 0%, 100%);
@@ -172,20 +175,22 @@
         z-index: 99;
         background-color: #0c0c0c9b;
         padding: 10px;
-        border-radius: 1px;
+        border-radius: 5px;
+        border: 1px solid #a3a3a3;
         display: none;
         color: hsl(0, 0%, 100%); /* Warna teks input */
         }
 
         .toggle-btn {
         position: absolute;
-        top: 521px;
+        top: 530px;
         left: 10px;
         z-index: 100;
         background-color: rgba(37, 37, 37, 0.962);
-        padding: 4.4px;
-        border-radius: 1px;
+        padding: 10px;
+        border-radius: 5px;
         cursor: pointer;
+        border: 1px solid #a3a3a3;
         color: hsl(0, 0%, 100%); /* Warna teks input */
         }
         
@@ -200,7 +205,7 @@
             padding: 2px;
             margin: 2px 0;
             border: 1px solid hsl(0, 0%, 100%);
-            border-radius: 1px;
+            border-radius: 5px;
             background-color: rgba(250, 249, 249, 0.962);
         }
 
@@ -213,7 +218,7 @@
             color: white;
             padding: 5px 10px;
             border: 1px solid #ccc;
-            border-radius: 1px;
+            border-radius: 5px;
             z-index: 10;
             display: none; /* Awalnya tidak ditampilkan */
         }
@@ -262,7 +267,7 @@
     </div>
       
     <!-- Tombol untuk menampilkan atau menyembunyikan form koordinat TM-3 -->
-    <div class="toggle-tm3-btn" id="toggleTM3Btn">TM3</div>
+    <div class="toggle-tm3-btn" id="toggleTM3Btn">TM-3</div>
 
     <!-- Form input TM-3 -->
     <div class="tm3-input" id="tm3Input">
@@ -281,7 +286,7 @@
         <button id="convertBtn">Go To</button>
     </div>
 
-    <div class="toggle-btn" id="toggleBtn">Coor</div>
+    <div class="toggle-btn" id="toggleBtn">Coordinate</div>
 
     <div class="coordinate-input" id="coordinateInput">
         <label for="latitude">Latitude:</label>
@@ -864,7 +869,7 @@ const HGU = new GeoJSONLayer({
 
             // Layer Persil Tasikmadu
             const Tasikmadu = new GeoJSONLayer({
-                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/tarsikmadu.json",
+                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/tasikmadu.json",
                 title: "Persil Tasikmadu",
                 renderer: {
                     type: "simple",
@@ -1336,7 +1341,7 @@ const HGU = new GeoJSONLayer({
 
              // Layer Persil Gondangrejo
              const Gondangrejo = new GeoJSONLayer({
-                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/godangrejo.json",
+                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/gondangrejo.json",
                 title: "Persil Gondangrejo",
                 renderer: {
                     type: "simple",
@@ -2280,7 +2285,7 @@ const HGU = new GeoJSONLayer({
 
             // Layer Persil Matesih
             const Matesih = new GeoJSONLayer({
-                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/metisih.json",
+                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/matesih.json",
                 title: "Persil Matesih",
                 renderer: {
                     type: "simple",
@@ -3059,10 +3064,10 @@ var tm3Input = document.getElementById("tm3Input");
 toggleTM3Btn.addEventListener("click", function () {
     if (tm3Input.style.display === "none") {
         tm3Input.style.display = "block";
-        toggleTM3Btn.innerText = "<< TM3";
+        toggleTM3Btn.innerText = "<< TM-3";
     } else {
         tm3Input.style.display = "none";
-        toggleTM3Btn.innerText = "TM3";
+        toggleTM3Btn.innerText = "TM-3";
     }
 });
 
@@ -3073,10 +3078,10 @@ var coordinateInput = document.getElementById("coordinateInput");
 toggleBtn.addEventListener("click", function () {
     if (coordinateInput.style.display === "none") {
         coordinateInput.style.display = "block";
-        toggleBtn.innerText = "<< Coor";
+        toggleBtn.innerText = "<< Coordinate";
     } else {
         coordinateInput.style.display = "none";
-        toggleBtn.innerText = "Coor";
+        toggleBtn.innerText = "Coordinate";
     }
 });
 
