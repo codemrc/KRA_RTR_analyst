@@ -2991,13 +2991,14 @@ addCalculateZonesListener(HGU);
             map.add(PenggunaanTanah)
             map.add(LSD);
             map.add(RTRW);
+            map.add(RDTR);
             
             // Menambahkan LayerList untuk menampilkan semua layer kecuali layer "Persil"
             const layerList = new LayerList({
                 view: view,
                 listItemCreatedFunction: (event) => {
                 // Menyembunyikan layer LSD, kemampuanTanah, dan lereng dari LayerList
-                const hiddenLayers = [LSD, PenggunaanTanah,kemampuanTanah, lereng,persilGroup,BidangPTP];
+                const hiddenLayers = [RDTR,LSD, PenggunaanTanah,kemampuanTanah, lereng,persilGroup,BidangPTP];
                 if (hiddenLayers.includes(event.item.layer)) 
                     {event.item.visible = false;}
                 }
