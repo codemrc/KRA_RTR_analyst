@@ -289,8 +289,8 @@
         <label for="longitude">Longitude:</label>
         <input type="text" id="longitude" placeholder="Enter 110.76543"><br>
         <button id="goToBtn">Go To</button>
-     </div>
-     <div id="koordinat-display" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); 
+    </div>
+    <div id="koordinat-display" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); 
     background-color: rgba(37, 37, 37, 0.962); color: white; padding: 5px 10px; border: 1px solid #ccc; border-radius: 5px; z-index: 10; display: none;">
         <!-- Koordinat akan muncul di sini setelah klik pada peta -->
     </div>
@@ -319,7 +319,7 @@
             "esri/widgets/Search",
             "esri/widgets/Legend"
         ], (Map, MapView, GeoJSONLayer, GroupLayer, BasemapToggle,Expand,LayerList, Locate, Graphic,geometryEngine,Popup,ScaleBar,Compass,Search,Legend) => {
-            // Event listener untuk tombol "<< analis"
+            // Event listener untuk tombol "<< Back"
             document.getElementById("toggleBackBtn").addEventListener("click", function() {
                 window.location.href = "https://codemrc.github.io/KRA_RTR/";
             });
@@ -352,6 +352,7 @@
                 { value: "Waduk", symbol: { type: "simple-fill", color: [151, 219, 242, 0.2], outline: { width: 1, color: "#000000" } } }  // biru muda atau light sky blue
                 ]
             };
+
             // Warna untuk setiap kategori
             const renderer_RDTR = {
                     type: "unique-value",
@@ -390,6 +391,7 @@
 
                     ]
                 };
+
             // Insert Basemap
             const map = new Map({
                 basemap: "dark-gray-vector"
@@ -426,7 +428,7 @@
                     content: "Kategori: {NAMOBJ}"
                 }
             });
-            
+
             // Layer LSD
             const LSD = new GeoJSONLayer({
                 url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/LSD_KRA.json",
@@ -519,9 +521,9 @@
                     content: "Kategori: {PTNOBJNAME}"
                 }
             });
-//---------------
-// Fungsi untuk mengonversi Latitude/Longitude ke TM3
-function convertLatLonToTM3(latitude, longitude, zone) {
+//------------------------------------------------------------------
+            // Fungsi untuk mengonversi Latitude/Longitude ke TM3
+            function convertLatLonToTM3(latitude, longitude, zone) {
                 const a = 6378137; // Jari-jari bumi (WGS84)
                 const e = 0.081819191; // Eksentrisitas elipsoid
                 const FE = 200000; // False Easting untuk TM3 di Indonesia
@@ -578,6 +580,9 @@ function convertLatLonToTM3(latitude, longitude, zone) {
 
                 console.log(`TM3 Koordinat: Easting: ${tm3Coords.easting}, Northing: ${tm3Coords.northing}`); // Debug log TM3
             });
+
+
+            
 //--------------------------
 // Fungsi untuk menghitung luas tumpang tindih untuk layer yang berbeda
 function getAreaForLayer(layer, geometry, field) {
@@ -672,8 +677,7 @@ const HGU = new GeoJSONLayer({
                     ]
             });
 //------------------
-
-// Layer Persil Colomadu
+            // Layer Persil Colomadu
             const Colomadu = new GeoJSONLayer({
                 url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/colomadu.json",
                 title: "Persil Colomadu",
@@ -787,6 +791,7 @@ const HGU = new GeoJSONLayer({
                 ]
 
             });
+//---------------------------------------
 
             // Layer Persil Karanganyar
             const Karanganyar = new GeoJSONLayer({
@@ -1025,6 +1030,7 @@ const HGU = new GeoJSONLayer({
                 ]
             });
 
+//------------------------------------------
             // Layer Persil Tawangmangu
             const Tawangmangu = new GeoJSONLayer({
                 url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/tawangmangu.json",
@@ -1043,16 +1049,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Tawangmangu",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1096,16 +1167,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jaten",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1149,16 +1285,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Kebakkramat",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1202,16 +1403,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Gondangrejo",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1255,16 +1521,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jatipuro",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1308,16 +1639,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil karangpandan",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1361,16 +1757,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Mojogedang",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1414,16 +1875,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jumantono",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1467,16 +1993,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Ngargoyoso",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1520,16 +2111,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jumapolo",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1573,16 +2229,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jatiyoso",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1626,16 +2347,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Matesih",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1679,16 +2465,81 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Jenawi",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
+                    content: function(feature) {
+                        const geometry = feature.graphic.geometry;
+                        const promises = [
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
+                        ];
+
+                        return Promise.all(promises).then(function(results) {
+                            const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
+                            let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
+                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+
+                            // Mengelompokkan hasil berdasarkan layer terkait
+                            results[0].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RTRWSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[2].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LerengSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[3].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[4].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+
+                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
+                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
+                            if (LSDSummary.length === 0) LSDSummary.push("-");
+                            if (LerengSummary.length === 0) LerengSummary.push("-");
+                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
+                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
+
+                            // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
+                            kesimpulan = `
+                                Persil ini berada pada:<br>
+                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                - Lereng: ${LerengSummary.join(", ")}<br>
+                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                            `;
+
+                            // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
+                            const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
+                            const LUASTERTUL = feature.graphic.attributes.LUASTERTUL || 'Data tidak tersedia';
+                            const TIPEHAK = feature.graphic.attributes.TIPEHAK || 'Data tidak tersedia';
+                            const KELURAHAN = feature.graphic.attributes.KELURAHAN || 'Data tidak tersedia';
+                            const KECAMATAN = feature.graphic.attributes.KECAMATAN || 'Data tidak tersedia';
+
+                            // Konten popup
+                            return `
+                                <b>Kategori:</b>
+                                <ul>
+                                    <li><b>NIB:</b> ${NIB}</li>
+                                    
+                                </ul>
+                                <b>Kesimpulan:</b> ${kesimpulan}
+                            `;
+                        }).catch(function(error) {
+                            console.error("Error in popup content generation: ", error);
+                            return "Error calculating overlapping zones.";
+                        });
+                    }
                 },
                 // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
                 labelingInfo: [
@@ -1733,60 +2584,6 @@ const HGU = new GeoJSONLayer({
                 visible: true,
                 popupTemplate: {
                     title: "Persil Kerjo",
-                    content: `
-                        <b>Kategori:</b>
-                        <ul>
-                            <li><b>NIB:</b> {NIB}</li>
-                            <li><b>LUAS:</b> {LUASTERTUL} <b> m2<b></li>
-                            <li><b>TIPE HAK:</b> {TIPEHAK}</li>
-                            <li><b>KELURAHAN:</b> {KELURAHAN}</li>
-                            <li><b>KECAMATAN:</b> {KECAMATAN}</li>
-                        </ul>
-                    `
-                },
-                // Konfigurasi labeling untuk menampilkan NIB pada zoom level 20
-                labelingInfo: [
-                        {
-                            labelExpressionInfo: {
-                                expression: "$feature.NIB"
-                            },
-                            symbol: {
-                                type: "text",  // Simbol teks untuk label
-                                color: [0, 0, 0, 0.4],  // Warna hitam dengan transparansi 60% (Alpha = 0.4)
-                                haloColor: "white",  // Warna halo di sekeliling teks
-                                haloSize: "0.1px",  // Ukuran halo
-                                font: {
-                                    size: 10,  // Ukuran font
-                                    //weight: "bold"
-                                    family: "Cursive"  // Jenis font cursive
-                                }
-                            },
-                            // Tentukan skala minimal untuk menampilkan label
-                            minScale: 1000,  // Skala yang sesuai untuk zoom level 20
-                            labelPlacement: "center-center"
-                        }
-                    ]
-
-            });
-
-            // Layer Persil bidang
-            const bidang = new GeoJSONLayer({
-                url: "https://raw.githubusercontent.com/codemrc/KRA_RTR/main/wonosari.json",
-                title: "Persil bidang",
-                renderer: {
-                    type: "simple",
-                    symbol: {
-                        type: "simple-fill",
-                        color: [255, 255, 255, 0],  // Transparan 0%
-                        outline: {
-                            color: [211, 211, 211, 0.6], // Outline abu-abu
-                            width: 1
-                        }
-                    }
-                },
-                visible: true,
-                popupTemplate: {
-                    title: "Persil bidang",
                     content: function(feature) {
                         const geometry = feature.graphic.geometry;
                         const promises = [
@@ -1973,20 +2770,21 @@ addCalculateZonesListener(Jaten);
 addCalculateZonesListener(Kebakkramat);
 addCalculateZonesListener(Gondangrejo);
 addCalculateZonesListener(HGU);
-addCalculateZonesListener(bidang);
 
-            //--------------------------------------------------------------------------------
+
+//----------------------------
+//-------------------------------------
             // GroupLayer untuk sub-layer Persil
             const persilGroup = new GroupLayer({
                 title: "Persil",
                 layers: [Jenawi,Kerjo,Jatipuro,Jumapolo,Jatiyoso,Jumantono,Matesih,Ngargoyoso,
                 Mojogedang,Karangpandan, Tasikmadu, Tawangmangu,Jaten,Kebakkramat,
-                Karanganyar,Gondangrejo,Colomadu,bidang]
+                Karanganyar,Gondangrejo,Colomadu,HGU]
             });
 
             //--------------------
             // Simbologi Batas Admin Api-api
-                const Batas1 = {
+            const Batas1 = {
                 type: "simple-fill",
                 color: [255, 252, 155, 0],
                 outline: {
@@ -2017,7 +2815,7 @@ addCalculateZonesListener(bidang);
                 title: "Batas KEC",
                 symbol: BatasKEC
             };
-            // Renderer Bidang PTP
+            // Renderer untuk Bidang PTP berdasarkan nilai KEGIATAN
             const renderer_Bidang_PTP = {
                 type: "unique-value",
                 field: "KEGIATAN",  // Field yang digunakan untuk kategori
@@ -2193,14 +2991,13 @@ addCalculateZonesListener(bidang);
             map.add(PenggunaanTanah)
             map.add(LSD);
             map.add(RTRW);
-            map.add(RDTR);
             
             // Menambahkan LayerList untuk menampilkan semua layer kecuali layer "Persil"
             const layerList = new LayerList({
                 view: view,
                 listItemCreatedFunction: (event) => {
                 // Menyembunyikan layer LSD, kemampuanTanah, dan lereng dari LayerList
-                const hiddenLayers = [RDTR, LSD, PenggunaanTanah,kemampuanTanah, lereng,persilGroup,BidangPTP];
+                const hiddenLayers = [LSD, PenggunaanTanah,kemampuanTanah, lereng,persilGroup,BidangPTP];
                 if (hiddenLayers.includes(event.item.layer)) 
                     {event.item.visible = false;}
                 }
@@ -2307,153 +3104,153 @@ addCalculateZonesListener(bidang);
             view.ui.add(legend, "bottom-right");
             //-------------------
           // Toggle TM-3 form visibility
-            var toggleTM3Btn = document.getElementById("toggleTM3Btn");
-            var tm3Input = document.getElementById("tm3Input");
+var toggleTM3Btn = document.getElementById("toggleTM3Btn");
+var tm3Input = document.getElementById("tm3Input");
 
-            toggleTM3Btn.addEventListener("click", function () {
-                if (tm3Input.style.display === "none") {
-                    tm3Input.style.display = "block";
-                    toggleTM3Btn.innerText = "<< TM3";
-                } else {
-                    tm3Input.style.display = "none";
-                    toggleTM3Btn.innerText = "TM3";
-                }
-            });
+toggleTM3Btn.addEventListener("click", function () {
+    if (tm3Input.style.display === "none") {
+        tm3Input.style.display = "block";
+        toggleTM3Btn.innerText = "<< TM3";
+    } else {
+        tm3Input.style.display = "none";
+        toggleTM3Btn.innerText = "TM3";
+    }
+});
 
-            // Toggle Coordinate form visibility
-            var toggleBtn = document.getElementById("toggleBtn");
-            var coordinateInput = document.getElementById("coordinateInput");
+// Toggle Coordinate form visibility
+var toggleBtn = document.getElementById("toggleBtn");
+var coordinateInput = document.getElementById("coordinateInput");
 
-            toggleBtn.addEventListener("click", function () {
-                if (coordinateInput.style.display === "none") {
-                    coordinateInput.style.display = "block";
-                    toggleBtn.innerText = "<< Coor";
-                } else {
-                    coordinateInput.style.display = "none";
-                    toggleBtn.innerText = "Coor";
-                }
-            });
+toggleBtn.addEventListener("click", function () {
+    if (coordinateInput.style.display === "none") {
+        coordinateInput.style.display = "block";
+        toggleBtn.innerText = "<< Coor";
+    } else {
+        coordinateInput.style.display = "none";
+        toggleBtn.innerText = "Coor";
+    }
+});
 
-            // Fungsi untuk menghitung konversi TM3 ke Latitude/Longitude
-            function convertTM3ToLatLon(easting, northing, zone) {
-                const a = 6378137; // Jari-jari bumi (WGS84)
-                const e = 0.081819191; // Eksentrisitas elipsoid
-                const FE = 200000; // False Easting untuk TM3 di Indonesia
-                const FN = 1500000; // False Northing untuk belahan selatan
-                const k0 = 0.9999; // Skala pusat
-                let lambda0; // Central Meridian dalam radian
+// Fungsi untuk menghitung konversi TM3 ke Latitude/Longitude
+function convertTM3ToLatLon(easting, northing, zone) {
+    const a = 6378137; // Jari-jari bumi (WGS84)
+    const e = 0.081819191; // Eksentrisitas elipsoid
+    const FE = 200000; // False Easting untuk TM3 di Indonesia
+    const FN = 1500000; // False Northing untuk belahan selatan
+    const k0 = 0.9999; // Skala pusat
+    let lambda0; // Central Meridian dalam radian
 
-                // Tentukan central meridian berdasarkan zona yang dipilih
-                if (zone === "49.1") {
-                    lambda0 = 109.5 * (Math.PI / 180);
-                } else if (zone === "49.2") {
-                    lambda0 = 112.5 * (Math.PI / 180);
-                }
+    // Tentukan central meridian berdasarkan zona yang dipilih
+    if (zone === "49.1") {
+        lambda0 = 109.5 * (Math.PI / 180);
+    } else if (zone === "49.2") {
+        lambda0 = 112.5 * (Math.PI / 180);
+    }
 
-                const M = (northing - FN) / k0;
-                const mu = M / (a * (1 - Math.pow(e, 2) / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
-                const e1 = (1 - Math.sqrt(1 - Math.pow(e, 2))) / (1 + Math.sqrt(1 - Math.pow(e, 2)));
-                const J1 = 3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32;
-                const J2 = 21 * Math.pow(e1, 2) / 16 - 55 * Math.pow(e1, 4) / 32;
-                const J3 = 151 * Math.pow(e1, 3) / 96;
-                const J4 = 1097 * Math.pow(e1, 4) / 512;
-                const phi1 = mu + J1 * Math.sin(2 * mu) + J2 * Math.sin(4 * mu) + J3 * Math.sin(6 * mu) + J4 * Math.sin(8 * mu);
+    const M = (northing - FN) / k0;
+    const mu = M / (a * (1 - Math.pow(e, 2) / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
+    const e1 = (1 - Math.sqrt(1 - Math.pow(e, 2))) / (1 + Math.sqrt(1 - Math.pow(e, 2)));
+    const J1 = 3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32;
+    const J2 = 21 * Math.pow(e1, 2) / 16 - 55 * Math.pow(e1, 4) / 32;
+    const J3 = 151 * Math.pow(e1, 3) / 96;
+    const J4 = 1097 * Math.pow(e1, 4) / 512;
+    const phi1 = mu + J1 * Math.sin(2 * mu) + J2 * Math.sin(4 * mu) + J3 * Math.sin(6 * mu) + J4 * Math.sin(8 * mu);
 
-                const N1 = a / Math.sqrt(1 - Math.pow(e * Math.sin(phi1), 2));
-                const T1 = Math.pow(Math.tan(phi1), 2);
-                const C1 = (Math.pow(e, 2) / (1 - Math.pow(e, 2))) * Math.pow(Math.cos(phi1), 2);
-                const R1 = a * (1 - Math.pow(e, 2)) / Math.pow(1 - Math.pow(e * Math.sin(phi1), 2), 3 / 2);
-                const D = (easting - FE) / (N1 * k0);
+    const N1 = a / Math.sqrt(1 - Math.pow(e * Math.sin(phi1), 2));
+    const T1 = Math.pow(Math.tan(phi1), 2);
+    const C1 = (Math.pow(e, 2) / (1 - Math.pow(e, 2))) * Math.pow(Math.cos(phi1), 2);
+    const R1 = a * (1 - Math.pow(e, 2)) / Math.pow(1 - Math.pow(e * Math.sin(phi1), 2), 3 / 2);
+    const D = (easting - FE) / (N1 * k0);
 
-                // Hitung latitude 
-                const lat = phi1 - (N1 * Math.tan(phi1) / R1) * ((D * D / 2) - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1) * Math.pow(D, 4) / 24);
-                // Hitung longitude
-                const lon = lambda0 + (D / Math.cos(phi1)) - ((1 + 2 * T1 + C1) * Math.pow(D, 3) / 6);
+    // Hitung latitude 
+    const lat = phi1 - (N1 * Math.tan(phi1) / R1) * ((D * D / 2) - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1) * Math.pow(D, 4) / 24);
+    // Hitung longitude
+    const lon = lambda0 + (D / Math.cos(phi1)) - ((1 + 2 * T1 + C1) * Math.pow(D, 3) / 6);
 
-                // Konversi ke derajat
-                const latitude = lat * (180 / Math.PI);
-                const longitude = lon * (180 / Math.PI);
+    // Konversi ke derajat
+    const latitude = lat * (180 / Math.PI);
+    const longitude = lon * (180 / Math.PI);
 
-                return { latitude, longitude };
-            }
+    return { latitude, longitude };
+}
 
-            // Fungsi untuk menambahkan pin ke peta
-            function addPinToMap(latitude, longitude) {
-                var point = {
-                    type: "point", // Jenis geometri
-                    longitude: longitude,
-                    latitude: latitude
-                };
+// Fungsi untuk menambahkan pin ke peta
+function addPinToMap(latitude, longitude) {
+    var point = {
+        type: "point", // Jenis geometri
+        longitude: longitude,
+        latitude: latitude
+    };
 
-                var markerSymbol = {
-                    type: "simple-marker", // Jenis simbol
-                    color: [255, 255, 0], // Warna pin (misalnya kuning)
-                    outline: {
-                        color: [255, 255, 255], // Warna outline pin (putih)
-                        width: 2
-                    }
-                };
+    var markerSymbol = {
+        type: "simple-marker", // Jenis simbol
+        color: [255, 255, 0], // Warna pin (misalnya kuning)
+        outline: {
+            color: [255, 255, 255], // Warna outline pin (putih)
+            width: 2
+        }
+    };
 
-                var pointGraphic = new Graphic({
-                    geometry: point,
-                    symbol: markerSymbol
-                });
+    var pointGraphic = new Graphic({
+        geometry: point,
+        symbol: markerSymbol
+    });
 
-                // Hapus pin lama (jika ada) sebelum menambahkan yang baru
-                view.graphics.removeAll();
-                view.graphics.add(pointGraphic);
-            }
+    // Hapus pin lama (jika ada) sebelum menambahkan yang baru
+    view.graphics.removeAll();
+    view.graphics.add(pointGraphic);
+}
 
-            // Fungsi gabungan: Konversi TM3 dan GoTo dengan Zoom
-            document.getElementById("convertBtn").addEventListener("click", function () {
-                const easting = parseFloat(document.getElementById("tm3-easting").value);
-                const northing = parseFloat(document.getElementById("tm3-northing").value);
-                const zone = document.getElementById("zone").value;
+// Fungsi gabungan: Konversi TM3 dan GoTo dengan Zoom
+document.getElementById("convertBtn").addEventListener("click", function () {
+    const easting = parseFloat(document.getElementById("tm3-easting").value);
+    const northing = parseFloat(document.getElementById("tm3-northing").value);
+    const zone = document.getElementById("zone").value;
 
-                if (!isNaN(easting) && !isNaN(northing)) {
-                    const result = convertTM3ToLatLon(easting, northing, zone);
+    if (!isNaN(easting) && !isNaN(northing)) {
+        const result = convertTM3ToLatLon(easting, northing, zone);
 
-                    // Masukkan hasil konversi ke input Latitude dan Longitude
-                    document.getElementById("latitude").value = result.latitude.toFixed(6);
-                    document.getElementById("longitude").value = result.longitude.toFixed(6);
+        // Masukkan hasil konversi ke input Latitude dan Longitude
+        document.getElementById("latitude").value = result.latitude.toFixed(6);
+        document.getElementById("longitude").value = result.longitude.toFixed(6);
 
-                    // Pindahkan peta ke koordinat hasil konversi
-                    view.goTo({
-                        center: [result.longitude, result.latitude],
-                        zoom: 19 // Sesuaikan level zoom
-                    });
+        // Pindahkan peta ke koordinat hasil konversi
+        view.goTo({
+            center: [result.longitude, result.latitude],
+            zoom: 19 // Sesuaikan level zoom
+        });
 
-                    // Tambahkan pin (penanda lokasi) di lokasi hasil konversi
-                    addPinToMap(result.latitude, result.longitude);
+        // Tambahkan pin (penanda lokasi) di lokasi hasil konversi
+        addPinToMap(result.latitude, result.longitude);
 
-                } else {
-                    alert("Masukkan koordinat TM3 yang valid.");
-                }
-            });
+    } else {
+        alert("Masukkan koordinat TM3 yang valid.");
+    }
+});
 
-            // Fungsi Go To berdasarkan input Latitude/Longitude (tombol koordinat)
-            document.getElementById("goToBtn").addEventListener("click", function () {
-                var latitude = parseFloat(document.getElementById("latitude").value);
-                var longitude = parseFloat(document.getElementById("longitude").value);
+// Fungsi Go To berdasarkan input Latitude/Longitude (tombol koordinat)
+document.getElementById("goToBtn").addEventListener("click", function () {
+    var latitude = parseFloat(document.getElementById("latitude").value);
+    var longitude = parseFloat(document.getElementById("longitude").value);
 
-                if (!isNaN(latitude) && !isNaN(longitude)) {
-                    view.goTo({
-                        center: [longitude, latitude],
-                        zoom: 19 // Sesuaikan level zoom
-                    });
+    if (!isNaN(latitude) && !isNaN(longitude)) {
+        view.goTo({
+            center: [longitude, latitude],
+            zoom: 19 // Sesuaikan level zoom
+        });
 
-                    // Tambahkan pin (penanda lokasi) di lokasi yang diinputkan
-                    addPinToMap(latitude, longitude);
+        // Tambahkan pin (penanda lokasi) di lokasi yang diinputkan
+        addPinToMap(latitude, longitude);
 
-                } else {
-                    alert("Masukkan koordinat yang valid.");
-                }
-            });
+    } else {
+        alert("Masukkan koordinat yang valid.");
+    }
+});
 
 
             //-------------------------
              // Toggle untuk Search Container cari NIB
-             var toggleSearchContainer = document.getElementById("toggleSearchContainer");
+            var toggleSearchContainer = document.getElementById("toggleSearchContainer");
             var searchContainer = document.getElementById("searchContainer");
 
             toggleSearchContainer.addEventListener("click", function() {
@@ -2632,12 +3429,10 @@ addCalculateZonesListener(bidang);
     }).catch(function(error) {
         console.error("Error saat query fitur: ", error);
     });
-    });
-
-
-
-//----end
 });
+
+
+        });
     </script>
 </body>
 </html>
