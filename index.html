@@ -747,6 +747,7 @@ const HGU = new GeoJSONLayer({
                         const promises = [
                             getRTRWAreaForPersil(geometry),        // RTRW
                             getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(LBS, geometry, 'NAMOBJ'), // LBS
                             getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
                             getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
                             getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
@@ -755,7 +756,7 @@ const HGU = new GeoJSONLayer({
                         return Promise.all(promises).then(function(results) {
                             const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
                             let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
-                            let RTRWSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+                            let RTRWSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
 
                             // Mengelompokkan hasil berdasarkan layer terkait
                             results[0].forEach(zone => {
@@ -765,6 +766,10 @@ const HGU = new GeoJSONLayer({
                             results[1].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LSDSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                LBSSummary.push(`${zone.name}: ${percentage}%`);
                             });
                             results[2].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
@@ -780,11 +785,12 @@ const HGU = new GeoJSONLayer({
                             });
 
                             // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
-                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
+                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
                                 kesimpulan = `
                                     Persil ini berada pada:<br>
                                     - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
                                     - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                    - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
                                     - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
@@ -861,31 +867,31 @@ const HGU = new GeoJSONLayer({
                     content: function(feature) {
                         const geometry = feature.graphic.geometry;
                         const promises = [
-                            getRDTRAreaForPersil(geometry),               // RDTR
-                            getRTRWAreaForPersil(geometry),              // RTRW
-                            getAreaForLayer(LSD, geometry, 'LSD'),
-                            getAreaForLayer(lereng, geometry, 'LERENG'),
-                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'),
-                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME')
+                            getRTRWAreaForPersil(geometry),        // RTRW
+                            getAreaForLayer(LSD, geometry, 'LSD'), // LSD
+                            getAreaForLayer(LBS, geometry, 'NAMOBJ'), // LBS
+                            getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
+                            getAreaForLayer(kemampuanTanah, geometry, 'Lname'), // Kemampuan Tanah
+                            getAreaForLayer(PenggunaanTanah, geometry, 'PTNOBJNAME') // Penggunaan Tanah
                         ];
 
                         return Promise.all(promises).then(function(results) {
                             const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
                             let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
-                            let RTRWSummary = [], RDTRSummary = [], LSDSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+                            let RTRWSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
 
                             // Mengelompokkan hasil berdasarkan layer terkait
-                            results[1].forEach(zone => {
+                            results[0].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 RTRWSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[0].forEach(zone => {
+                            results[1].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
-                                RDTRSummary.push(`${zone.name}: ${percentage}%`);
+                                LSDSummary.push(`${zone.name}: ${percentage}%`);
                             });
                             results[2].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
-                                LSDSummary.push(`${zone.name}: ${percentage}%`);
+                                LBSSummary.push(`${zone.name}: ${percentage}%`);
                             });
                             results[3].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
@@ -900,24 +906,18 @@ const HGU = new GeoJSONLayer({
                                 PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
 
-                            // Cek apakah ada data di masing-masing layer, jika tidak ada, tambahkan tanda "-"
-                            if (RDTRSummary.length === 0) RDTRSummary.push("-");
-                            if (RTRWSummary.length === 0) RTRWSummary.push("-");
-                            if (LSDSummary.length === 0) LSDSummary.push("-");
-                            if (LerengSummary.length === 0) LerengSummary.push("-");
-                            if (KemampuanTanahSummary.length === 0) KemampuanTanahSummary.push("-");
-                            if (PenggunaanTanahSummary.length === 0) PenggunaanTanahSummary.push("-");
-
                             // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
-                            kesimpulan = `
-                                Persil ini berada pada:<br>
-                                - Kawasan RDTR: ${RDTRSummary.join(", ")}<br>
-                                - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
-                                - Kawasan LSD: ${LSDSummary.join(", ")}<br>
-                                - Lereng: ${LerengSummary.join(", ")}<br>
-                                - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                            `;
+                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
+                                kesimpulan = `
+                                    Persil ini berada pada:<br>
+                                    - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                    - Kawasan LSD: ${LSDSummary.join(", ")}<br>
+                                    - Kawasan LBS: ${LBSSummary.join(", ")}<br>
+                                    - Lereng: ${LerengSummary.join(", ")}<br>
+                                    - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
+                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
+                                `;
+                            }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
                             const NIB = feature.graphic.attributes.NIB || 'Data tidak tersedia';
