@@ -793,8 +793,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -868,6 +868,7 @@ const HGU = new GeoJSONLayer({
                         const geometry = feature.graphic.geometry;
                         const promises = [
                             getRTRWAreaForPersil(geometry),        // RTRW
+                            getRDTRAreaForPersil(geometry),        // RDTR
                             getAreaForLayer(LSD, geometry, 'LSD'), // LSD
                             getAreaForLayer(LBS, geometry, 'NAMOBJ'), // LBS
                             getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
@@ -878,45 +879,52 @@ const HGU = new GeoJSONLayer({
                         return Promise.all(promises).then(function(results) {
                             const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
                             let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
-                            let RTRWSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+                            let RTRWSummary = [], RDTRSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
 
                             // Mengelompokkan hasil berdasarkan layer terkait
                             results[0].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 RTRWSummary.push(`${zone.name}: ${percentage}%`);
                             });
+                            //RDTR
                             results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RDTRSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            //LSD
+                            results[2].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LSDSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[2].forEach(zone => {
+                            results[3].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LBSSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[3].forEach(zone => {
+                            results[4].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LerengSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[4].forEach(zone => {
+                            results[5].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[5].forEach(zone => {
+                            results[6].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
 
                             // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
-                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
+                            if (RTRWSummary.length > 0 ||RDTRSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0 ) {
                                 kesimpulan = `
                                     Persil ini berada pada:<br>
                                     - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                    - Kawasan RDTR: ${RDTRSummary.join(", ")}<br>
                                     - Kawasan LSD: ${LSDSummary.join(", ")}<br>
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -988,7 +996,8 @@ const HGU = new GeoJSONLayer({
                     content: function(feature) {
                         const geometry = feature.graphic.geometry;
                         const promises = [
-                            getRTRWAreaForPersil(geometry),        // RTRW
+                        getRTRWAreaForPersil(geometry),        // RTRW
+                            getRDTRAreaForPersil(geometry),        // RDTR
                             getAreaForLayer(LSD, geometry, 'LSD'), // LSD
                             getAreaForLayer(LBS, geometry, 'NAMOBJ'), // LBS
                             getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
@@ -999,45 +1008,52 @@ const HGU = new GeoJSONLayer({
                         return Promise.all(promises).then(function(results) {
                             const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
                             let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
-                            let RTRWSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+                            let RTRWSummary = [], RDTRSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
 
                             // Mengelompokkan hasil berdasarkan layer terkait
                             results[0].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 RTRWSummary.push(`${zone.name}: ${percentage}%`);
                             });
+                            //RDTR
                             results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RDTRSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            //LSD
+                            results[2].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LSDSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[2].forEach(zone => {
+                            results[3].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LBSSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[3].forEach(zone => {
+                            results[4].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LerengSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[4].forEach(zone => {
+                            results[5].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[5].forEach(zone => {
+                            results[6].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
 
                             // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
-                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
+                            if (RTRWSummary.length > 0 ||RDTRSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0 ) {
                                 kesimpulan = `
                                     Persil ini berada pada:<br>
                                     - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                    - Kawasan RDTR: ${RDTRSummary.join(", ")}<br>
                                     - Kawasan LSD: ${LSDSummary.join(", ")}<br>
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1155,8 +1171,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1226,7 +1242,8 @@ const HGU = new GeoJSONLayer({
                     content: function(feature) {
                         const geometry = feature.graphic.geometry;
                         const promises = [
-                            getRTRWAreaForPersil(geometry),        // RTRW
+                        getRTRWAreaForPersil(geometry),        // RTRW
+                            getRDTRAreaForPersil(geometry),        // RDTR
                             getAreaForLayer(LSD, geometry, 'LSD'), // LSD
                             getAreaForLayer(LBS, geometry, 'NAMOBJ'), // LBS
                             getAreaForLayer(lereng, geometry, 'LERENG'), // Lereng
@@ -1237,45 +1254,52 @@ const HGU = new GeoJSONLayer({
                         return Promise.all(promises).then(function(results) {
                             const totalArea = geometryEngine.geodesicArea(geometry, "square-meters"); // Luas persil total
                             let kesimpulan = "Tidak ada tumpang tindih dengan kawasan RTRW atau layer lainnya.";
-                            let RTRWSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
+                            let RTRWSummary = [], RDTRSummary = [], LSDSummary = [],LBSSummary = [], LerengSummary = [], KemampuanTanahSummary = [], PenggunaanTanahSummary = [];
 
                             // Mengelompokkan hasil berdasarkan layer terkait
                             results[0].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 RTRWSummary.push(`${zone.name}: ${percentage}%`);
                             });
+                            //RDTR
                             results[1].forEach(zone => {
+                                const percentage = ((zone.area / totalArea) * 100).toFixed(2);
+                                RDTRSummary.push(`${zone.name}: ${percentage}%`);
+                            });
+                            //LSD
+                            results[2].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LSDSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[2].forEach(zone => {
+                            results[3].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LBSSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[3].forEach(zone => {
+                            results[4].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 LerengSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[4].forEach(zone => {
+                            results[5].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 KemampuanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
-                            results[5].forEach(zone => {
+                            results[6].forEach(zone => {
                                 const percentage = ((zone.area / totalArea) * 100).toFixed(2);
                                 PenggunaanTanahSummary.push(`${zone.name}: ${percentage}%`);
                             });
 
                             // Gabungkan semua hasil kesimpulan dalam format yang diinginkan
-                            if (RTRWSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0) {
+                            if (RTRWSummary.length > 0 ||RDTRSummary.length > 0 || LSDSummary.length > 0 || LBSSummary.length > 0 || LerengSummary.length > 0 || KemampuanTanahSummary.length > 0 || PenggunaanTanahSummary.length > 0 ) {
                                 kesimpulan = `
                                     Persil ini berada pada:<br>
                                     - Kawasan RTRW: ${RTRWSummary.join(", ")}<br>
+                                    - Kawasan RDTR: ${RDTRSummary.join(", ")}<br>
                                     - Kawasan LSD: ${LSDSummary.join(", ")}<br>
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1393,8 +1417,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1512,8 +1536,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                   
+                                `;// - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1631,8 +1655,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1750,8 +1774,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1869,8 +1893,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -1988,8 +2012,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2107,8 +2131,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2226,8 +2250,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2345,8 +2369,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2464,8 +2488,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2583,8 +2607,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;// -Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
@@ -2703,8 +2727,8 @@ const HGU = new GeoJSONLayer({
                                     - Kawasan LBS: ${LBSSummary.join(", ")}<br>
                                     - Lereng: ${LerengSummary.join(", ")}<br>
                                     - Kemampuan Tanah: ${KemampuanTanahSummary.join(", ")}<br>
-                                    - Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
-                                `;
+                                    
+                                `;//- Penggunaan Tanah: ${PenggunaanTanahSummary.join(", ")}
                             }
 
                             // Ambil nilai atribut, jika ada fallback ke 'Data tidak tersedia'
